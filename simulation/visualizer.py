@@ -1,74 +1,70 @@
-import pandas as pd
+from pathlib import Path
+import sys
+
 import plotly.graph_objects as go
-import os
 
-def build_network_visualization(data_dir):
-    """Reads project CSVs and builds an interactive Plotly graph."""
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-    neighborhoods = pd.read_csv(os.path.join(data_dir, 'neighborhoods.csv'))
-    facilities = pd.read_csv(os.path.join(data_dir, 'facilities.csv'))
-    roads = pd.read_csv(os.path.join(data_dir, 'existing_roads.csv'))
+try:
+    from src.core.graph import CairoDataLoader
+except ImportError:
+    from core.graph import CairoDataLoader
 
-    node_coords = {}
-    node_names = {}
-    
-    for _, row in neighborhoods.iterrows():
-        n_id = str(row['ID']).strip() 
-        node_coords[n_id] = (row['X-coordinate'], row['Y-coordinate'])
-        node_names[n_id] = row['Name']
-        
-    for _, row in facilities.iterrows():
-        f_id = str(row['ID']).strip()
-        node_coords[f_id] = (row['X-coordinate'], row['Y-coordinate'])
-        node_names[f_id] = row['Name']
+
+def build_network_visualization(data_dir, include_potential_roads=False):
+    """Load the core graph and build an interactive Plotly visualization."""
+
+    loader = CairoDataLoader(data_dir)
+    graph = loader.load_graph(include_potential_roads=include_potential_roads)
 
     fig = go.Figure()
 
     edge_x = []
     edge_y = []
-    
-    for _, row in roads.iterrows():
-        from_id = str(row['FromID']).strip()
-        to_id = str(row['ToID']).strip()
-        
-        if from_id in node_coords and to_id in node_coords:
-            x0, y0 = node_coords[from_id]
-            x1, y1 = node_coords[to_id]
-            
-            edge_x.extend([x0, x1, None])
-            edge_y.extend([y0, y1, None])
+
+    for edge in graph.unique_undirected_edges():
+        from_node = graph.nodes[edge.from_id]
+        to_node = graph.nodes[edge.to_id]
+        edge_x.extend([from_node.x, to_node.x, None])
+        edge_y.extend([from_node.y, to_node.y, None])
 
     fig.add_trace(go.Scatter(
-        x=edge_x, y=edge_y,
+        x=edge_x,
+        y=edge_y,
         line=dict(width=1.5, color='#888'),
         hoverinfo='none',
         mode='lines',
         name='Roads'
     ))
 
+    neighborhood_nodes = [node for node in graph.nodes.values() if not node.is_facility]
+    facility_nodes = [node for node in graph.nodes.values() if node.is_facility]
+
     fig.add_trace(go.Scatter(
-        x=neighborhoods['X-coordinate'], 
-        y=neighborhoods['Y-coordinate'],
+        x=[node.x for node in neighborhood_nodes],
+        y=[node.y for node in neighborhood_nodes],
         mode='markers+text',
-        text=neighborhoods['Name'],
-        textposition="top center",
-        hovertext=[f"{name}<br>Pop: {pop}" for name, pop in zip(neighborhoods['Name'], neighborhoods['Population'])],
+        text=[node.name for node in neighborhood_nodes],
+        textposition='top center',
+        hovertext=[f"{node.name}<br>Pop: {node.population}" for node in neighborhood_nodes],
         hoverinfo='text',
         marker=dict(
             showscale=True,
-            colorscale='YlGnBu', 
+            colorscale='YlGnBu',
             size=12,
-            color=neighborhoods['Population'],
+            color=[node.population for node in neighborhood_nodes],
             colorbar=dict(title='Population')
         ),
         name='Neighborhoods'
     ))
 
     fig.add_trace(go.Scatter(
-        x=facilities['X-coordinate'], 
-        y=facilities['Y-coordinate'],
+        x=[node.x for node in facility_nodes],
+        y=[node.y for node in facility_nodes],
         mode='markers',
-        hovertext=[f"{name}<br>Type: {ftype}" for name, ftype in zip(facilities['Name'], facilities['Type'])],
+        hovertext=[f"{node.name}<br>Type: {node.node_type}" for node in facility_nodes],
         hoverinfo='text',
         marker=dict(
             symbol='star',
@@ -83,7 +79,7 @@ def build_network_visualization(data_dir):
         title='CairoFlow: Baseline Transportation Network Graph',
         showlegend=True,
         hovermode='closest',
-        margin=dict(b=20,l=5,r=5,t=40),
+        margin=dict(b=20, l=5, r=5, t=40),
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         plot_bgcolor='white'
@@ -92,6 +88,6 @@ def build_network_visualization(data_dir):
     fig.show()
 
 if __name__ == "__main__":
-    DATA_DIRECTORY = os.path.join(os.path.dirname(__file__), '..', 'data')
-    
+    DATA_DIRECTORY = PROJECT_ROOT / 'data'
+
     build_network_visualization(DATA_DIRECTORY)

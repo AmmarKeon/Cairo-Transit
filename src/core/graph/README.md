@@ -235,10 +235,6 @@ Sets `metadata["closed"]` on edge and reverse edge. Called by `close_road()` / `
  
 ## How To Run
 
-```bash
-cd /home/mohamed-abdelhady/Coding/CairoFlow
-```
-
 ### Demo modules
 
 These modules include a small `__main__` demo and should print output when run:

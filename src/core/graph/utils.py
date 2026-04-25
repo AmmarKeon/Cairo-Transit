@@ -8,7 +8,6 @@ from typing import Dict, List, Optional, Sequence
 
 VALID_TIME_SLOTS = {"morning", "afternoon", "evening", "night"}
 
-
 def canonical_edge_key(from_id: str, to_id: str, directed: bool) -> str:
 	"""Return a stable edge identifier used for maps and lookups."""
 	if directed:

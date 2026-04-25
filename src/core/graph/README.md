@@ -1,5 +1,4 @@
-# CairoFlow Graph 
-
+# CairoFlow Graph Core
 
 ## Package Files
 
@@ -64,6 +63,17 @@
 |--------|---------|---------|-------------|
 | `volume(time_slot: str)` | `float` | Shortest Path, A*, Greedy Traffic | Pass `"morning"`, `"afternoon"`, `"evening"`, or `"night"`. Case-insensitive. Returns the stored traffic volume for that slot. Raises `ValueError` on invalid slot |
 
+### Model Invariants
+
+- `Node.node_id`, `Node.name`, and `Node.node_type` must be non-empty strings
+- `Node.population` must be non-negative
+- `Edge` self-loops are not allowed
+- `Edge.distance_km` must be greater than `0`
+- `Edge.capacity_veh_per_hour` must be non-negative
+- `Edge.condition_score` must stay on the dataset `1-10` scale
+- `existing_road=True` edges should not define `construction_cost_million_egp`
+- `TimeProfile` values must be non-negative traffic volumes
+
 ## `graph_structure.py`
 
 Adjacency-list graph with undirected default. Stores nodes, edges, time profiles, and road state.
@@ -74,6 +84,16 @@ Adjacency-list graph with undirected default. Stores nodes, edges, time profiles
 | `nodes` | `dict[str, Node]` | All nodes by `node_id`. |
 | `adjacency` | `dict[str, list[Edge]]` | `node_id` -> outgoing edges. Undirected graphs store both directions. |
 | `time_profiles` | `dict[str, TimeProfile]` | Edge traffic profiles. Key format handled by `canonical_edge_key()`. |
+
+### Graph Invariants
+
+- Duplicate node IDs are rejected
+- Duplicate edges are rejected
+- In undirected graphs, adding `A -> B` already represents the logical edge `A <-> B`
+- `add_time_profile()` requires a real edge to exist first
+- `unique_undirected_edges()` is only valid for undirected graphs
+- Missing lookups such as `neighbors()` or `get_edge()` return empty results / `None`
+- Invalid mutations raise `ValueError`
 
 ### Functions
 
@@ -95,6 +115,8 @@ Adjacency-list graph with undirected default. Stores nodes, edges, time profiles
 |-------|---------|-------------|
 | `directed` | `False` | Set `True` for one-way roads. Most Cairo roads are undirected. |
 
+**Errors**: None.
+
 ### `add_node(node: Node)`
 
 Adds node to graph. Initializes empty adjacency list.
@@ -102,6 +124,8 @@ Adds node to graph. Initializes empty adjacency list.
 | Param | Description |
 |-------|-------------|
 | `node` | `Node` instance. `node_id` must be unique. |
+
+**Errors**: Raises `ValueError` if the node ID already exists or if the `Node` itself fails model validation.
 
 ### `add_edge(edge: Edge)`
 
@@ -112,6 +136,8 @@ Adds edge. **Both endpoints must exist first** or raises `ValueError`.
 | `edge` | `Edge` instance. |
 
 **Undirected behavior**: Automatically creates reverse edge with swapped `from_id`/`to_id`. Copies all attributes including `metadata`.
+
+**Errors**: Raises `ValueError` if either endpoint is missing, if the edge already exists, or if the `Edge` itself fails model validation.
 
 ### `add_time_profile(from_id, to_id, profile)`
 
@@ -125,6 +151,8 @@ Attaches `TimeProfile` to an edge.
 
 Key format handled internally by `canonical_edge_key()`. Overwrites existing profile.
 
+**Errors**: Raises `ValueError` if the edge does not exist first or if the `TimeProfile` itself fails model validation.
+
 ### `get_time_profile(from_id, to_id) -> TimeProfile | None`
 
 Returns traffic profile for edge. `None` if not set.
@@ -133,6 +161,8 @@ Returns traffic profile for edge. `None` if not set.
 |-------|-------------|
 | `from_id` | Source node ID. |
 | `to_id` | Destination node ID. |
+
+**Errors**: None. Returns `None` when the edge has no attached profile.
 
 ### `close_road(from_id, to_id)` / `open_road(from_id, to_id)`
 
@@ -147,6 +177,8 @@ Toggles road availability by setting `edge.metadata["closed"] = True/False`.
 
 **Used by**: Future shortest-path consumers for road-closure scenarios.
 
+**Errors**: Raises `ValueError` if the road does not exist.
+
 ### `neighbors(node_id) -> Iterable[Edge]`
 
 Returns outgoing edges from node. Empty if node has no edges or does not exist.
@@ -157,6 +189,8 @@ Returns outgoing edges from node. Empty if node has no edges or does not exist.
 
 **Used by**: Dijkstra, A*, and all traversal algorithms.
 
+**Errors**: None. Returns an empty iterable when the node has no outgoing edges or is unknown.
+
 ### `assert_node_exists(node_id)`
 
 Raises `ValueError` if node not in graph. Use for input validation.
@@ -164,6 +198,8 @@ Raises `ValueError` if node not in graph. Use for input validation.
 | Param | Description |
 |-------|-------------|
 | `node_id` | Node ID to check. |
+
+**Errors**: Raises `ValueError` if the node does not exist.
 
 ### `get_edge(from_id, to_id) -> Edge | None`
 
@@ -176,6 +212,8 @@ Returns single edge matching direction. `None` if not found.
 
 **Note**: For undirected graphs, `get_edge(u, v)` and `get_edge(v, u)` both return the same logical edge but from different adjacency lists.
 
+**Errors**: None. Returns `None` if no matching edge is found.
+
 ### `unique_undirected_edges() -> list[Edge]`
 
 Returns each undirected edge once. Filters out reverse duplicates.
@@ -186,12 +224,15 @@ Returns each undirected edge once. Filters out reverse duplicates.
 |---------|-------------|
 | `list[Edge]` | Unique edges. Keyed by `canonical_edge_key()` with `directed=False`. |
 
+**Errors**: Raises `ValueError` if called on a directed graph.
+
 ## Internal
 
 ### `_set_road_state(from_id, to_id, closed)`
 
 Sets `metadata["closed"]` on edge and reverse edge. Called by `close_road()` / `open_road()`. Raises `ValueError` if edge missing.
-
+ 
+ 
 ## How To Run
 
 ```bash

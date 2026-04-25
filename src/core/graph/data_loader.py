@@ -8,8 +8,10 @@ from typing import Dict, List
 
 try:
 	from .graph import Edge, Graph, Node, TimeProfile
+	from .utils import canonical_edge_key
 except ImportError:  
 	from core.graph.graph import Edge, Graph, Node, TimeProfile
+	from core.graph.utils import canonical_edge_key
 
 
 class CairoDataLoader:
@@ -22,6 +24,8 @@ class CairoDataLoader:
 
 	def load_graph(self, include_potential_roads: bool = False, directed: bool = False) -> Graph:
 		graph = Graph(directed=directed)
+		seen_edges: set[str] = set()
+		seen_profiles: set[str] = set()
 
 		for row in self._read_csv("neighborhoods.csv"):
 			graph.add_node(
@@ -48,6 +52,10 @@ class CairoDataLoader:
 			)
 
 		for row in self._read_csv("existing_roads.csv"):
+			edge_key = canonical_edge_key(str(row["FromID"]).strip(), str(row["ToID"]).strip(), directed)
+			if edge_key in seen_edges:
+				continue
+			seen_edges.add(edge_key)
 			graph.add_edge(
 				Edge(
 					from_id=str(row["FromID"]).strip(),
@@ -61,6 +69,10 @@ class CairoDataLoader:
 
 		if include_potential_roads:
 			for row in self._read_csv("potential_roads.csv"):
+				edge_key = canonical_edge_key(str(row["FromID"]).strip(), str(row["ToID"]).strip(), directed)
+				if edge_key in seen_edges:
+					continue
+				seen_edges.add(edge_key)
 				graph.add_edge(
 					Edge(
 						from_id=str(row["FromID"]).strip(),
@@ -75,6 +87,10 @@ class CairoDataLoader:
 
 		for row in self._read_csv("traffic_flow.csv"):
 			from_id, to_id = [part.strip() for part in row["RoadID"].split("-", maxsplit=1)]
+			profile_key = canonical_edge_key(from_id, to_id, directed)
+			if profile_key in seen_profiles:
+				continue
+			seen_profiles.add(profile_key)
 			graph.add_time_profile(
 				from_id,
 				to_id,

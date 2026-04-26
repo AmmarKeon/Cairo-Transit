@@ -108,6 +108,7 @@ Adjacency-list graph with undirected default. Stores nodes, edges, time profiles
 - `assert_node_exists(node_id)`
 - `get_edge(from_id, to_id) -> Edge | None`
 - `unique_undirected_edges() -> list[Edge]`
+- get_node(self, node_id: str) -> Optional[Node]
 
 ### `__init__(directed: bool = False)`
 

@@ -148,3 +148,14 @@ def test_unique_undirected_edges_rejects_directed_graph():
 
     with pytest.raises(ValueError, match="undirected graphs"):
         graph.unique_undirected_edges()
+
+def test_get_node_returns_node_for_existing_id():
+    graph = build_test_graph()
+    node = graph.get_node("1")
+    assert node is not None
+    assert node.node_id == "1"
+    assert node.name == "A"
+
+def test_get_node_returns_none_for_missing_id():
+    graph = build_test_graph()
+    assert graph.get_node("999") is None

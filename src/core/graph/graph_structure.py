@@ -21,7 +21,11 @@ class GraphStructure:
         self.nodes: Dict[str, Node] = {}
         self.adjacency: Dict[str, List[Edge]] = {}
         self.time_profiles: Dict[str, TimeProfile] = {}
-
+        
+    def get_node(self, node_id: str) -> Optional[Node]:
+        """Return a node by ID, or None if absent."""
+        return self.nodes.get(node_id)
+        
     def add_node(self, node: Node) -> None:
         """Add a node to the graph and create its adjacency bucket."""
         if node.node_id in self.nodes:

@@ -1,11 +1,21 @@
-ID,Name,Type,X-coordinate,Y-coordinate
-F1,Cairo International Airport,Airport,31.41,30.11
-F2,Ramses Railway Station,Transit Hub,31.25,30.06
-F3,Cairo University,Education,31.21,30.03
-F4,Al-Azhar University,Education,31.26,30.05
-F5,Egyptian Museum,Tourism,31.23,30.05
-F6,Cairo International Stadium,Sports,31.30,30.07
-F7,Smart Village,Business,30.97,30.07
-F8,Cairo Festival City,Commercial,31.40,30.03
-F9,Qasr El Aini Hospital,Medical,31.23,30.03
-F10,Maadi Military Hospital,Medical,31.25,29.95
+ID,Name,Type,Y-coordinate,X-coordinate
+F1,Cairo International Airport,Airport,30.1140504,31.4245461
+F2,Ramses Railway Station,Transit Hub,30.0629785,31.2460533
+F3,Cairo University,Education,30.026812,31.2059186
+F4,Al-Azhar University,Education,30.0451256,31.2648207
+F5,Egyptian Museum,Tourism,30.0479664,31.2336093
+F6,Cairo International Stadium,Sports,30.0690313,31.3122096
+F7,Smart Village,Business,30.0719412,31.0185288
+F8,Cairo Festival City,Commercial,30.032513,31.41296
+F9,Qasr El Aini Hospital,Medical,30.0442,31.249
+F10,Maadi Military Hospital,Medical,29.9692226,31.2459856
+F11,Cairo Opera House,Culture,30.0420,31.2240
+F12,Khan El Khalili,Tourism,30.0480,31.2620
+F13,Ain Shams University,Education,30.0750,31.2800
+F14,Cairo Citadel,Tourism,30.0300,31.2550
+F15,Giza Pyramids,Tourism,29.9792,31.1342
+F16,Cairo International Convention Center,Business,30.0400,31.2100
+F17,Wadi Hof Military Base,Government,29.8800,31.3000
+F18,Helwan University,Education,29.8600,31.3200
+F19,Al Azhar Park,Tourism,30.0380,31.2650
+F20,Pharaonic Village,Tourism,29.9900,31.2150

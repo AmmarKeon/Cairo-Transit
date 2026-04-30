@@ -1,16 +1,26 @@
-ID,Name,Population,Type,X-coordinate,Y-coordinate
-1,Maadi,250000,Residential,31.25,29.96
-2,Nasr City,500000,Mixed,31.34,30.06
-3,Downtown Cairo,100000,Business,31.24,30.04
-4,New Cairo,300000,Residential,31.47,30.03
-5,Heliopolis,200000,Mixed,31.32,30.09
-6,Zamalek,50000,Residential,31.22,30.06
-7,6th October City,400000,Mixed,30.98,29.93
-8,Giza,550000,Mixed,31.21,29.99
-9,Mohandessin,180000,Business,31.20,30.05
-10,Dokki,220000,Mixed,31.21,30.03
-11,Shubra,450000,Residential,31.24,30.11
-12,Helwan,350000,Industrial,31.33,29.85
-13,New Administrative Capital,50000,Government,31.80,30.02
-14,Al Rehab,120000,Residential,31.49,30.06
-15,Sheikh Zayed,150000,Residential,30.94,30.01
+ID,Name,Population,Type,Y-coordinate,X-coordinate
+1,Maadi,250000,Residential,29.9603313,31.263055
+2,Nasr City,500000,Mixed,30.0521177,31.3422045
+3,Downtown Cairo,100000,Business,30.0443934,31.2357457
+4,New Cairo,300000,Residential,30.0277688,31.4756825
+5,Heliopolis,200000,Mixed,30.1005985,31.3329136
+6,Zamalek,50000,Residential,30.0204678,31.2254432
+7,6th October City,400000,Mixed,29.9723458,30.9409205
+8,Giza,550000,Mixed,29.9870753,31.2118063
+9,Mohandessin,180000,Business,30.0583952,31.2020231
+10,Dokki,220000,Mixed,30.0388955,31.2125563
+11,Shubra,450000,Residential,30.0800186,31.245269
+12,Helwan,350000,Industrial,29.8500001,31.333333
+13,New Administrative Capital,50000,Government,30.023829,31.7549459
+14,Al Rehab,120000,Residential,30.0627677,31.503368
+15,Sheikh Zayed,150000,Residential,30.048347,30.9832235
+16,Imbaba,400000,Residential,30.0700,31.2100
+17,Boulaq,150000,Industrial,30.0500,31.2200
+18,Sayeda Zeinab,200000,Mixed,30.0300,31.2400
+19,Shorouk,100000,Residential,30.1000,31.5000
+20,Obour,80000,Industrial,30.1200,31.4500
+21,Badr City,60000,Residential,30.1100,31.5500
+22,Madinaty,150000,Residential,30.0900,31.5200
+23,Town of October,200000,Mixed,29.9500,30.9800
+24,Haram,300000,Mixed,29.9900,31.0800
+25,Faisal,250000,Residential,30.0100,31.1200

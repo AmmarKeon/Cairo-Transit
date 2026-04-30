@@ -1,5 +1,5 @@
 """GET /api/algorithms"""
-from api.shared import (
+from backend.shared import (
     dijkstra, astar, bfs, dfs, greedy,
     bellmanford, bidirectional, randomwalk, mst
 )

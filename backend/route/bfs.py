@@ -1,13 +1,13 @@
-"""GET /api/route/bellmanford"""
-from api.shared import bellmanford, NODES
-from api.road_geometry import get_road_path
+"""GET /api/route/bfs"""
+from backend.shared import bfs, NODES
+from backend.road_geometry import get_road_path
 
 def handler(request):
     start = request.args.get("start", "")
     goal = request.args.get("goal", "")
     if not start or not goal:
         return {"success": False, "error": "start and goal query params required"}
-    result = bellmanford(start, goal)
+    result = bfs(start, goal)
     if result.get("success") and "data" in result:
         result["data"]["path"] = get_road_path(result["data"].get("nodes", []), NODES)
         result["data"]["from"] = start

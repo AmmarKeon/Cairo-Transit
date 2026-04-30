@@ -1,9 +1,9 @@
 """Vercel Python API entry point - routes to sub-handlers."""
-from api.shared import (
+from backend.shared import (
     dijkstra, astar, bfs, dfs, greedy,
     bellmanford, bidirectional, randomwalk, mst, NODES
 )
-from api.road_geometry import get_road_path
+from backend.road_geometry import get_road_path
 
 def handler(request):
     path = request.path
@@ -15,7 +15,7 @@ def handler(request):
 
     # Route: /api/algorithms
     if path == "/api/algorithms":
-        from api.algorithms import handler as alg_handler
+        from backend.algorithms import handler as alg_handler
         return alg_handler(request)
 
     # Route: /api/network/mst

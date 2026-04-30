@@ -1,6 +1,6 @@
 """GET /api/route/dfs"""
-from api.shared import dfs, NODES
-from api.road_geometry import get_road_path
+from backend.shared import dfs, NODES
+from backend.road_geometry import get_road_path
 
 def handler(request):
     start = request.args.get("start", "")

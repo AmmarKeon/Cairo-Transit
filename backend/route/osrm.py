@@ -1,6 +1,6 @@
 """GET /api/route/osrm (Valhalla real road geometry)"""
-from api.shared import NODES
-from api.road_geometry import get_road_path
+from backend.shared import NODES
+from backend.road_geometry import get_road_path
 
 def handler(request):
     start = request.args.get("start", "")

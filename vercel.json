@@ -1,18 +1,11 @@
 {
   "version": 2,
-  "experimentalServices": {
-    "frontend": {
-      "routePrefix": "/"
-    },
-    "backend": {
-      "entrypoint": "backend",
-      "routePrefix": "/_/backend"
-    }
-  },
-  "routes": [
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/_/backend/api/$1"
+      "source": "/api/(.*)",
+      "destination": "https://YOUR-BACKEND-URL/_/backend/api/$1"
     }
   ]
 }

@@ -1,7 +1,5 @@
 """
-Cairo Transit API - Vercel Python Serverless
-Main entry point for all API routes.
-Each endpoint function is exposed via URL path mapping.
+Cairo Transit API - Vercel Python Serverless (FastAPI ASGI)
 """
 import json
 import math
@@ -11,9 +9,11 @@ import heapq
 import random
 import time
 import urllib.request
-import urllib.error
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
+
+from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import JSONResponse
 
 # ─── Data Loading ───────────────────────────────────────────────────────────────
 
@@ -61,6 +61,10 @@ for a, b, dist in ROADS:
     GRAPH[a].append((b, dist))
     GRAPH[b].append((a, dist))
 
+# ─── FastAPI App ───────────────────────────────────────────────────────────────
+
+app = FastAPI()
+
 # ─── Graph Utilities ───────────────────────────────────────────────────────────
 
 def reconstruct_path(parent: Dict[str, str], start: str, goal: str) -> List[str]:
@@ -100,12 +104,10 @@ def heuristic(node_id: str, goal_id: str) -> float:
 def dijkstra_algo(start: str, goal: str) -> dict:
     if start not in GRAPH: return {"success": False, "error": f"Start '{start}' not found"}
     if goal not in GRAPH: return {"success": False, "error": f"Goal '{goal}' not found"}
-
     dist = {n: float("inf") for n in GRAPH}
     dist[start] = 0
     parent = {start: None}
     pq = [(0, start)]
-
     while pq:
         d, u = heapq.heappop(pq)
         if d > dist[u]:
@@ -117,24 +119,20 @@ def dijkstra_algo(start: str, goal: str) -> dict:
                 dist[v] = dist[u] + w
                 parent[v] = u
                 heapq.heappush(pq, (dist[v], v))
-
     if dist[goal] == float("inf"):
         return {"success": False, "error": "No path found"}
-
     path = reconstruct_path(parent, start, goal)
     return {"success": True, "data": {"nodes": path, "distance": dist[goal], "algorithm": "Dijkstra"}}
 
 def astar_algo(start: str, goal: str) -> dict:
     if start not in GRAPH: return {"success": False, "error": f"Start '{start}' not found"}
     if goal not in GRAPH: return {"success": False, "error": f"Goal '{goal}' not found"}
-
     g_score = {n: float("inf") for n in GRAPH}
     g_score[start] = 0
     parent = {start: None}
     f_score = {n: float("inf") for n in GRAPH}
     f_score[start] = heuristic(start, goal)
     open_set = [(f_score[start], start)]
-
     while open_set:
         _, u = heapq.heappop(open_set)
         if u == goal:
@@ -146,17 +144,14 @@ def astar_algo(start: str, goal: str) -> dict:
                 g_score[v] = tentative_g
                 f_score[v] = tentative_g + heuristic(v, goal)
                 heapq.heappush(open_set, (f_score[v], v))
-
     if g_score[goal] == float("inf"):
         return {"success": False, "error": "No path found"}
-
     path = reconstruct_path(parent, start, goal)
     return {"success": True, "data": {"nodes": path, "distance": g_score[goal], "algorithm": "A*"}}
 
 def bfs_algo(start: str, goal: str) -> dict:
     if start not in GRAPH: return {"success": False, "error": f"Start '{start}' not found"}
     if goal not in GRAPH: return {"success": False, "error": f"Goal '{goal}' not found"}
-
     parent = {start: None}
     queue = [start]
     while queue:
@@ -167,17 +162,14 @@ def bfs_algo(start: str, goal: str) -> dict:
             if v not in parent:
                 parent[v] = u
                 queue.append(v)
-
     if goal not in parent:
         return {"success": False, "error": "No path found"}
-
     path = reconstruct_path(parent, start, goal)
     return {"success": True, "data": {"nodes": path, "distance": calculate_distance(path), "algorithm": "BFS"}}
 
 def dfs_algo(start: str, goal: str) -> dict:
     if start not in GRAPH: return {"success": False, "error": f"Start '{start}' not found"}
     if goal not in GRAPH: return {"success": False, "error": f"Goal '{goal}' not found"}
-
     parent = {start: None}
     stack = [start]
     while stack:
@@ -188,17 +180,14 @@ def dfs_algo(start: str, goal: str) -> dict:
             if v not in parent:
                 parent[v] = u
                 stack.append(v)
-
     if goal not in parent:
         return {"success": False, "error": "No path found"}
-
     path = reconstruct_path(parent, start, goal)
     return {"success": True, "data": {"nodes": path, "distance": calculate_distance(path), "algorithm": "DFS"}}
 
 def greedy_algo(start: str, goal: str) -> dict:
     if start not in GRAPH: return {"success": False, "error": f"Start '{start}' not found"}
     if goal not in GRAPH: return {"success": False, "error": f"Goal '{goal}' not found"}
-
     parent = {start: None}
     pq = [(heuristic(start, goal), start)]
     while pq:
@@ -209,17 +198,14 @@ def greedy_algo(start: str, goal: str) -> dict:
             if v not in parent:
                 parent[v] = u
                 heapq.heappush(pq, (heuristic(v, goal), v))
-
     if goal not in parent:
         return {"success": False, "error": "No path found"}
-
     path = reconstruct_path(parent, start, goal)
     return {"success": True, "data": {"nodes": path, "distance": calculate_distance(path), "algorithm": "Greedy"}}
 
 def bellmanford_algo(start: str, goal: str) -> dict:
     if start not in GRAPH: return {"success": False, "error": f"Start '{start}' not found"}
     if goal not in GRAPH: return {"success": False, "error": f"Goal '{goal}' not found"}
-
     edges = []
     seen = set()
     for u, neighbors in GRAPH.items():
@@ -227,11 +213,9 @@ def bellmanford_algo(start: str, goal: str) -> dict:
             if (u, v) not in seen and (v, u) not in seen:
                 edges.append((u, v, w))
                 seen.add((u, v))
-
     dist = {n: float("inf") for n in GRAPH}
     dist[start] = 0
     parent = {}
-
     for _ in range(len(GRAPH) - 1):
         changed = False
         for u, v, w in edges:
@@ -242,10 +226,8 @@ def bellmanford_algo(start: str, goal: str) -> dict:
                     changed = True
         if not changed:
             break
-
     if dist[goal] == float("inf"):
         return {"success": False, "error": "No path found"}
-
     path = reconstruct_path(parent, start, goal)
     return {"success": True, "data": {"nodes": path, "distance": dist[goal], "algorithm": "Bellman-Ford"}}
 
@@ -253,7 +235,6 @@ def bidirectional_algo(start: str, goal: str) -> dict:
     if start not in GRAPH: return {"success": False, "error": f"Start '{start}' not found"}
     if goal not in GRAPH: return {"success": False, "error": f"Goal '{goal}' not found"}
     if start == goal: return {"success": True, "data": {"nodes": [start], "distance": 0, "algorithm": "Bidirectional"}}
-
     forward_parent = {start: None}
     backward_parent = {goal: None}
     forward_queue = [(0, start)]
@@ -261,7 +242,6 @@ def bidirectional_algo(start: str, goal: str) -> dict:
     forward_dist = {start: 0}
     backward_dist = {goal: 0}
     meeting = None
-
     while forward_queue and backward_queue:
         d_u, u = heapq.heappop(forward_queue)
         if d_u > forward_dist.get(u, float("inf")):
@@ -275,7 +255,6 @@ def bidirectional_algo(start: str, goal: str) -> dict:
                 forward_dist[v] = nd
                 forward_parent[v] = u
                 heapq.heappush(forward_queue, (nd, v))
-
         d_v, v = heapq.heappop(backward_queue)
         if d_v > backward_dist.get(v, float("inf")):
             continue
@@ -288,23 +267,19 @@ def bidirectional_algo(start: str, goal: str) -> dict:
                 backward_dist[u2] = nd
                 backward_parent[u2] = v
                 heapq.heappush(backward_queue, (nd, u2))
-
     if meeting is None:
         return {"success": False, "error": "No path found"}
-
     forward_path = []
     node = meeting
     while node is not None:
         forward_path.append(node)
         node = forward_parent.get(node)
     forward_path.reverse()
-
     backward_path = []
     node = backward_parent.get(meeting)
     while node is not None:
         backward_path.append(node)
         node = backward_parent.get(node)
-
     path = forward_path + backward_path
     total_dist = forward_dist.get(meeting, float("inf")) + backward_dist.get(meeting, 0)
     return {"success": True, "data": {"nodes": path, "distance": total_dist, "algorithm": "Bidirectional"}}
@@ -312,7 +287,6 @@ def bidirectional_algo(start: str, goal: str) -> dict:
 def randomwalk_algo(start: str, goal: str) -> dict:
     if start not in GRAPH: return {"success": False, "error": f"Start '{start}' not found"}
     if goal not in GRAPH: return {"success": False, "error": f"Goal '{goal}' not found"}
-
     best_path = []
     best_dist = float("inf")
     for _ in range(30):
@@ -345,10 +319,8 @@ def randomwalk_algo(start: str, goal: str) -> dict:
             if dist < best_dist:
                 best_dist = dist
                 best_path = path
-
     if not best_path:
         return {"success": False, "error": "No path found after 30 attempts"}
-
     return {"success": True, "data": {"nodes": best_path, "distance": best_dist, "algorithm": "Random Walk"}}
 
 def mst_algo() -> dict:
@@ -362,13 +334,11 @@ def mst_algo() -> dict:
     edges.sort()
     parent = {n: n for n in GRAPH}
     rank = {n: 0 for n in GRAPH}
-
     def find(x):
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
         return x
-
     def union(x, y):
         px, py = find(x), find(y)
         if px == py:
@@ -379,7 +349,6 @@ def mst_algo() -> dict:
         if rank[px] == rank[py]:
             rank[px] += 1
         return True
-
     mst_edges = []
     total_weight = 0.0
     for w, u, v in edges:
@@ -388,7 +357,6 @@ def mst_algo() -> dict:
             total_weight += w
         if len(mst_edges) == len(GRAPH) - 1:
             break
-
     return {"success": True, "data": {"edges": mst_edges, "total_weight": total_weight, "node_count": len(GRAPH)}}
 
 # ─── Road Geometry ────────────────────────────────────────────────────────────
@@ -427,14 +395,11 @@ def _get_segment_coords(from_lng: float, from_lat: float, to_lng: float, to_lat:
     key = f"{round(from_lng,6)},{round(from_lat,6)};{round(to_lng,6)},{round(to_lat,6)}"
     if key in _GEOMETRY_CACHE:
         return _GEOMETRY_CACHE[key]
-
-    time.sleep(0.1)  # Rate limit
-
+    time.sleep(0.1)
     payload = json.dumps({
         "locations": [{"lat": from_lat, "lon": from_lng}, {"lat": to_lat, "lon": to_lng}],
         "costing": "auto", "directions_options": {"units": "kilometers"}
     }).encode()
-
     try:
         req = urllib.request.Request(
             "https://valhalla1.openstreetmap.de/route",
@@ -485,64 +450,52 @@ ALGOS = {
     "randomwalk": randomwalk_algo,
 }
 
-# ─── Vercel Handler ──────────────────────────────────────────────────────────
+# ─── API Routes ───────────────────────────────────────────────────────────────
 
-def handler(request):
-    path = request.path
-    qs = request.args
+@app.get("/nodes")
+def get_nodes():
+    return [NODES[n] for n in sorted(NODES.keys())]
 
-    # GET /api/nodes
-    if path == "/api/nodes":
-        return [NODES[n] for n in sorted(NODES.keys())]
+@app.get("/algorithms")
+def get_algorithms():
+    return [
+        {"key": "dijkstra", "name": "Dijkstra's Algorithm", "complexity": "O((V+E) log V)", "color": "#22c55e", "implemented": True},
+        {"key": "astar", "name": "A* Search", "complexity": "O((V+E) log V)", "color": "#8b5cf6", "implemented": True},
+        {"key": "bfs", "name": "Breadth-First Search", "complexity": "O(V+E)", "color": "#eab308", "implemented": True},
+        {"key": "dfs", "name": "Depth-First Search", "complexity": "O(V+E)", "color": "#0ea5e9", "implemented": True},
+        {"key": "greedy", "name": "Greedy Best-First", "complexity": "O((V+E) log V)", "color": "#f43f5e", "implemented": True},
+        {"key": "bellmanford", "name": "Bellman-Ford", "complexity": "O(V*E)", "color": "#14b8a6", "implemented": True},
+        {"key": "bidirectional", "name": "Bidirectional Dijkstra", "complexity": "O((V+E) log V)", "color": "#ec4899", "implemented": True},
+        {"key": "randomwalk", "name": "Random Walk", "complexity": "O(n)", "color": "#a855f7", "implemented": True},
+        {"key": "osrm", "name": "Valhalla (OSM)", "complexity": "Real-world", "color": "#3b82f6", "implemented": True},
+        {"key": "mst", "name": "Minimum Spanning Tree", "complexity": "O(E log E)", "color": "#1a3a3a", "implemented": True},
+    ]
 
-    # GET /api/algorithms
-    if path == "/api/algorithms":
-        return [
-            {"key": "dijkstra", "name": "Dijkstra's Algorithm", "complexity": "O((V+E) log V)", "color": "#22c55e", "implemented": True},
-            {"key": "astar", "name": "A* Search", "complexity": "O((V+E) log V)", "color": "#8b5cf6", "implemented": True},
-            {"key": "bfs", "name": "Breadth-First Search", "complexity": "O(V+E)", "color": "#eab308", "implemented": True},
-            {"key": "dfs", "name": "Depth-First Search", "complexity": "O(V+E)", "color": "#0ea5e9", "implemented": True},
-            {"key": "greedy", "name": "Greedy Best-First", "complexity": "O((V+E) log V)", "color": "#f43f5e", "implemented": True},
-            {"key": "bellmanford", "name": "Bellman-Ford", "complexity": "O(V*E)", "color": "#14b8a6", "implemented": True},
-            {"key": "bidirectional", "name": "Bidirectional Dijkstra", "complexity": "O((V+E) log V)", "color": "#ec4899", "implemented": True},
-            {"key": "randomwalk", "name": "Random Walk", "complexity": "O(n)", "color": "#a855f7", "implemented": True},
-            {"key": "osrm", "name": "Valhalla (OSM)", "complexity": "Real-world", "color": "#3b82f6", "implemented": True},
-            {"key": "mst", "name": "Minimum Spanning Tree", "complexity": "O(E log E)", "color": "#1a3a3a", "implemented": True},
-        ]
+@app.get("/network/mst")
+def get_mst():
+    return mst_algo()
 
-    # GET /api/network/mst
-    if path == "/api/network/mst":
-        return mst_algo()
+@app.get("/route/{algo}")
+def get_route(algo: str, start: str = Query(...), goal: str = Query(...)):
+    if not start or not goal:
+        raise HTTPException(status_code=400, detail="start and goal query params required")
+    if algo == "osrm":
+        coords = get_road_path([start, goal])
+        return {"success": True, "data": {"path": coords, "nodes": [start, goal], "from": start, "to": goal, "algorithm": "Valhalla (OSM)"}}
+    algo_fn = ALGOS.get(algo)
+    if not algo_fn:
+        raise HTTPException(status_code=404, detail=f"Unknown algorithm: {algo}")
+    result = algo_fn(start, goal)
+    if result.get("success") and "data" in result:
+        node_ids = result["data"].get("nodes", [])
+        result["data"]["path"] = get_road_path(node_ids)
+        result["data"]["from"] = start
+        result["data"]["to"] = goal
+    return result
 
-    # GET /api/route/<algo>
-    if path.startswith("/api/route/"):
-        algo = path.split("/")[-1]
-        start = qs.get("start", "")
-        goal = qs.get("goal", "")
-        if not start or not goal:
-            return {"success": False, "error": "start and goal query params required"}
-
-        if algo == "osrm":
-            coords = get_road_path([start, goal])
-            return {"success": True, "data": {"path": coords, "nodes": [start, goal], "from": start, "to": goal, "algorithm": "Valhalla (OSM)"}}
-
-        algo_fn = ALGOS.get(algo)
-        if not algo_fn:
-            return {"success": False, "error": f"Unknown algorithm: {algo}"}
-
-        result = algo_fn(start, goal)
-        if result.get("success") and "data" in result:
-            node_ids = result["data"].get("nodes", [])
-            result["data"]["path"] = get_road_path(node_ids)
-            result["data"]["from"] = start
-            result["data"]["to"] = goal
-        return result
-
-    # GET / or unknown
-    if path in ("/", ""):
-        return {
-            "message": "Cairo Transit API",
-            "endpoints": ["/api/nodes", "/api/route/<algo>", "/api/network/mst", "/api/algorithms"]
-        }
-
-    return {"success": False, "error": "Not found"}, 404
+@app.get("/")
+def root():
+    return {
+        "message": "Cairo Transit API",
+        "endpoints": ["/api/nodes", "/api/route/<algo>", "/api/network/mst", "/api/algorithms"]
+    }

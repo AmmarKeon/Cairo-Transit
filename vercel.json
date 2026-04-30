@@ -1,8 +1,14 @@
 {
   "version": 2,
+  "experimentalServices": {
+    "frontend": {
+      "routePrefix": "/"
+    },
+    "backend": {
+      "entrypoint": "backend",
+      "routePrefix": "/api"
+    }
+  },
   "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "outputDirectory": "frontend/dist"
 }

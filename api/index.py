@@ -17,7 +17,7 @@ from typing import Dict, List, Tuple, Optional
 
 # ─── Data Loading ───────────────────────────────────────────────────────────────
 
-DATA_DIR = Path(os.path.dirname(__file__)).parent / "data"
+DATA_DIR = Path(__file__).parent.parent / "data"
 
 def load_nodes(filepath: str) -> Dict[str, dict]:
     nodes = {}

@@ -1,11 +1,10 @@
-# Exclude everything by default
-**
-
-# Allow only what's needed for deployment
-!frontend/
-!frontend/**
-!backend/
-!backend/**
-!data/
-!data/**
-!vercel.json
+# Exclude development artifacts and nested dependencies
+.git
+.vercel
+node_modules
+**/node_modules
+**/__pycache__
+**/*.pyc
+*.log
+.env
+.env.*

@@ -1,0 +1,15 @@
+# Vercel ignore file - exclude backend and other non-frontend files
+backend/
+_backend/
+docs/
+data/
+*.py
+*.md
+!README.md
+run_*.py
+run_*.bat
+test_*.py
+test_algo.py
+test_all.py
+test_api.py
+test_routes.py

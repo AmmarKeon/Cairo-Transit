@@ -4,8 +4,8 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://YOUR-BACKEND-URL/_/backend/api/$1"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

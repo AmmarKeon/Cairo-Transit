@@ -1,11 +1,11 @@
-# Exclude everything except frontend and backend
+# Exclude everything by default
 **
 
-# Allow these directories
+# Allow these for deployment
 !frontend/
 !frontend/**
-!backend/
-!backend/**
+!api/
+!api/**
 !data/
 !data/**
 !vercel.json

@@ -1,20 +1,11 @@
-# Vercel ignore file
-# Exclude old backend (replaced by api/ serverless functions)
-backend/
-_backend/
+# Exclude everything by default
+**
 
-# Exclude documentation and test files
-docs/
-*.md
-!README.md
-!VERCEL_DEPLOY.md
-
-# Exclude local test/run scripts
-run_*.py
-run_*.bat
-test_*.py
-test_algo.py
-test_all.py
-test_api.py
-test_routes.py
-test_local_api.py
+# Allow only these for deployment
+!frontend/
+!frontend/**
+!api/
+!api/**
+!data/
+!data/**
+!vercel.json

@@ -1,11 +1,15 @@
-# Vercel ignore file - exclude backend and other non-frontend files
+# Vercel ignore file
+# Exclude old backend (replaced by api/ serverless functions)
 backend/
 _backend/
+
+# Exclude documentation and test files
 docs/
-data/
-*.py
 *.md
 !README.md
+!VERCEL_DEPLOY.md
+
+# Exclude local test/run scripts
 run_*.py
 run_*.bat
 test_*.py
@@ -13,3 +17,4 @@ test_algo.py
 test_all.py
 test_api.py
 test_routes.py
+test_local_api.py

@@ -12,7 +12,6 @@ from pathlib import Path
 import urllib.request
 import urllib.error
 import json
-from functools import lru_cache
 import csv
 
 # Import modular algorithms
@@ -44,6 +43,21 @@ app.add_middleware(
 )
 
 import atexit
+
+@app.on_event("startup")
+def startup_prefetch():
+    """Pre-fetch road geometry for all graph edges in background thread."""
+    def _prefetch():
+        uncached = 0
+        for a, b, _ in ROADS:
+            na, nb = NODES.get(a), NODES.get(b)
+            if na and nb:
+                seg = get_road_segment(na['lng'], na['lat'], nb['lng'], nb['lat'])
+                if seg is None:
+                    uncached += 1
+        logger.info(f"Pre-fetch complete: {_road_cache.size} cached segments, {uncached} failed")
+        _road_cache.save_if_dirty()
+    threading.Thread(target=_prefetch, daemon=True).start()
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -136,6 +150,10 @@ for a, b, dist in ROADS:
     GRAPH[b].append((a, dist))
 
 logger.info(f"Loaded {len(NODES)} nodes, {len(ROADS)} roads, {len(GRAPH)} graph vertices")
+
+# ─── Road Geometry Stats ──────────────────────────────────────────────────────
+
+_road_stats = {"success": 0, "failed": 0, "cached": 0}
 
 # ─── Road Geometry Cache ────────────────────────────────────────────────────────
 
@@ -273,11 +291,8 @@ def _decode_polyline6(encoded: str) -> List[List[float]]:
     return coords
 
 
-@lru_cache(maxsize=2048)
-def _cached_valhalla_segment(from_lng: float, from_lat: float, to_lng: float, to_lat: float) -> Optional[str]:
-    """Fetch a single road segment from Valhalla API. Returns JSON-encoded coords or None."""
-    _valhalla_limiter.wait()
-
+def _fetch_valhalla_raw(from_lng: float, from_lat: float, to_lng: float, to_lat: float) -> Optional[str]:
+    """Fetch a single road segment from Valhalla API (no caching). Returns JSON-encoded coords or None."""
     payload = json.dumps({
         "locations": [
             {"lat": from_lat, "lon": from_lng},
@@ -287,56 +302,68 @@ def _cached_valhalla_segment(from_lng: float, from_lat: float, to_lng: float, to
         "directions_options": {"units": "kilometers"}
     }).encode()
 
-    try:
-        req = urllib.request.Request(
-            VALHALLA_URL,
-            data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": "CairoTransit/6.0.0"
-            }
-        )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode())
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "CairoTransit/6.0.0"
+    }
 
-        trip = data.get("trip", {})
-        legs = trip.get("legs", [])
-        if legs:
-            shape = legs[0].get("shape", "")
-            if shape:
-                coords = _decode_polyline6(shape)
-                if coords:
-                    return json.dumps(coords)
-    except urllib.error.HTTPError as e:
-        if e.code == 429:
-            # Rate limited — wait and retry once
-            logger.info("Valhalla rate limited, retrying in 1s...")
-            time.sleep(1.0)
-            try:
-                req2 = urllib.request.Request(
-                    VALHALLA_URL,
-                    data=payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "User-Agent": "CairoTransit/6.0.0"
-                    }
-                )
-                with urllib.request.urlopen(req2, timeout=10) as response2:
-                    data2 = json.loads(response2.read().decode())
-                legs2 = data2.get("trip", {}).get("legs", [])
-                if legs2:
-                    shape2 = legs2[0].get("shape", "")
-                    if shape2:
-                        coords2 = _decode_polyline6(shape2)
-                        if coords2:
-                            return json.dumps(coords2)
-            except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError, OSError) as e2:
-                logger.warning(f"Valhalla retry error: {e2}")
-        else:
-            logger.warning(f"Valhalla segment error: {e}")
-    except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError, OSError) as e:
-        logger.warning(f"Valhalla segment error: {e}")
+    max_retries = 3
+    for attempt in range(max_retries):
+        _valhalla_limiter.wait()
+        try:
+            req = urllib.request.Request(VALHALLA_URL, data=payload, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as response:
+                data = json.loads(response.read().decode())
+
+            trip = data.get("trip", {})
+            legs = trip.get("legs", [])
+            if legs:
+                shape = legs[0].get("shape", "")
+                if shape:
+                    coords = _decode_polyline6(shape)
+                    if coords:
+                        return json.dumps(coords)
+            # Valhalla returned valid JSON but no shape — segment may not exist
+            logger.warning(f"Valhalla returned no shape for ({from_lat},{from_lng})->({to_lat},{to_lng})")
+            return None
+
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                wait = 1.0 * (attempt + 1)
+                logger.info(f"Valhalla rate limited (attempt {attempt+1}/{max_retries}), waiting {wait}s...")
+                time.sleep(wait)
+                continue
+            else:
+                logger.warning(f"Valhalla HTTP {e.code} for ({from_lat},{from_lng})->({to_lat},{to_lng}): {e}")
+                return None
+        except (urllib.error.URLError, OSError, json.JSONDecodeError) as e:
+            wait = 0.5 * (attempt + 1)
+            logger.warning(f"Valhalla error (attempt {attempt+1}/{max_retries}): {e}, retrying in {wait}s...")
+            time.sleep(wait)
+            continue
+
+    logger.error(f"Valhalla failed after {max_retries} attempts for ({from_lat},{from_lng})->({to_lat},{to_lng})")
     return None
+
+
+# In-memory cache that skips None values (unlike lru_cache which caches everything)
+_valhalla_memory: Dict[str, Optional[str]] = {}
+
+def _cached_valhalla_segment(from_lng: float, from_lat: float, to_lng: float, to_lat: float) -> Optional[str]:
+    """Fetch road segment with in-memory cache. Does NOT cache failures."""
+    key = f"{round(from_lng,6)},{round(from_lat,6)};{round(to_lng,6)},{round(to_lat,6)}"
+
+    # Check in-memory cache (skip if None = previous failure)
+    if key in _valhalla_memory:
+        return _valhalla_memory[key]
+
+    result = _fetch_valhalla_raw(from_lng, from_lat, to_lng, to_lat)
+
+    # Only cache successes — allow retries on next request if it failed
+    if result is not None:
+        _valhalla_memory[key] = result
+
+    return result
 
 
 def get_road_segment(from_lng: float, from_lat: float, to_lng: float, to_lat: float) -> Optional[List[List[float]]]:
@@ -350,15 +377,29 @@ def get_road_segment(from_lng: float, from_lat: float, to_lng: float, to_lat: fl
     # 1. Check disk cache
     cached = _road_cache.get(from_lng, from_lat, to_lng, to_lat)
     if cached is not None:
+        _road_stats["cached"] += 1
         return cached
 
-    # 2. Call Valhalla API
+    # 2. Call Valhalla API (forward direction)
     result_json = _cached_valhalla_segment(from_lng, from_lat, to_lng, to_lat)
     if result_json:
         coords = json.loads(result_json)
         _road_cache.put(from_lng, from_lat, to_lng, to_lat, coords)
+        _road_stats["success"] += 1
         return coords
 
+    # 3. Try reverse direction (roads are symmetric)
+    result_json_rev = _cached_valhalla_segment(to_lng, to_lat, from_lng, from_lat)
+    if result_json_rev:
+        coords = json.loads(result_json_rev)
+        coords = coords[::-1]  # Reverse the path
+        _road_cache.put(from_lng, from_lat, to_lng, to_lat, coords)
+        _road_stats["success"] += 1
+        return coords
+
+    # 4. Both directions failed — log and return None (straight line fallback)
+    _road_stats["failed"] += 1
+    logger.warning(f"No road geometry for ({from_lat},{from_lng})->({to_lat},{to_lng}), using straight line")
     return None
 
 
@@ -514,6 +555,8 @@ def cache_stats():
     return {
         "cached_segments": _road_cache.size,
         "cache_file": str(CACHE_FILE),
+        "stats": _road_stats,
+        "total_graph_edges": len(ROADS),
     }
 
 # ─── Network Endpoints ─────────────────────────────────────────────────────────

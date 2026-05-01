@@ -1087,6 +1087,7 @@ function AppContent() {
                     color: algoColor,
                     weight: 5,
                     opacity: 0.8,
+                    dashArray: routePath.length <= 2 ? '8 8' : undefined,
                   }}
                 />
               )}
@@ -1250,6 +1251,7 @@ function AppContent() {
                       color: algoColor,
                       weight: 5,
                       opacity: 0.8,
+                      dashArray: routePath.length <= 2 ? '8 8' : undefined,
                     }}
                   />
                 )}

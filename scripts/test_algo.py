@@ -1,3 +1,10 @@
+"""Quick algorithm test - run from project root with: python scripts/test_algo.py"""
+import sys
+import os
+
+# Add backend to path so we can import main
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+
 from main import dijkstra_route, astar_route, bfs_route
 
 tests = [('F2', 'F9'), ('F2', '3'), ('1', 'F1')]

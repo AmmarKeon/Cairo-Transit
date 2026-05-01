@@ -208,3 +208,16 @@ __marimo__/
 
 # Road geometry cache
 backend/.road_cache/
+
+# Runtime artifacts
+*.log
+saved_session.json
+utf8_session.json
+
+# Vercel (handled on vercel-deploy branch)
+vercel.json
+.vercel/
+
+# Node.js
+node_modules/
+frontend/dist/

@@ -1,13 +1,17 @@
+"""Start both backend and frontend servers.
+Run from project root: python scripts/run_all.py"""
 import subprocess
 import sys
 import os
 import time
 
+project_root = os.path.join(os.path.dirname(__file__), '..')
+
 # Start backend
 print("Starting backend server...")
 backend_proc = subprocess.Popen(
     [sys.executable, "main.py"],
-    cwd="backend",
+    cwd=os.path.join(project_root, "backend"),
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE
 )
@@ -16,7 +20,7 @@ time.sleep(3)
 # Test backend
 import urllib.request
 try:
-    req = urllib.request.urlopen("http://localhost:8000/api/network/nodes")
+    req = urllib.request.urlopen("http://localhost:8000/api/nodes")
     data = req.read().decode()
     print(f"Backend OK - nodes loaded")
 except Exception as e:
@@ -28,7 +32,7 @@ except Exception as e:
 print("Starting frontend server...")
 frontend_proc = subprocess.Popen(
     ["npm", "run", "dev"],
-    cwd="frontend",
+    cwd=os.path.join(project_root, "frontend"),
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE
 )

@@ -4,10 +4,10 @@ echo   Cairo Transit - Full Stack
 echo ========================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
-echo Killing old processes...
-taskkill /F /IM python.exe >nul 2>&1
+echo Killing old backend on port 8000...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8000 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
 
 echo.
 echo [1] Starting Backend (port 8000)...
